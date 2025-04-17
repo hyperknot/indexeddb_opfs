@@ -170,6 +170,15 @@ function App() {
 
   return (
     <div class="app-container">
+      <h1>IndexedDB vs. OPFS benchmark</h1>
+      <p>
+        <a href="https://github.com/hyperknot/indexeddb_opfs">GitHub</a>
+      </p>
+      <p>
+        Drop a local folder on the drag and drop area, it'll benchmark how much time is required to
+        store it.
+      </p>
+      <p>It seems Chrome needs notifications to enable persistence</p>
       {/* Storage persistence status indicator */}
       <div class="persistence-status">
         <Show
