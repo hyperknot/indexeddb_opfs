@@ -1,3 +1,3 @@
-Comparison between IndexedDB and OPFS performance in browsers.
+IndexedDB performance benchmark.
 
 Deployed on https://idb-opfs.hyperknot.com/

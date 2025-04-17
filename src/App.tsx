@@ -8,42 +8,63 @@ import {
   benchmarkReadFromIndexedDB,
   benchmarkWriteToIndexedDB,
 } from './benchmarks'
-import { closeDB, deleteDB, initDB } from './indexeddb.ts' // Added deleteDB import
+import { initIDB } from './idb.ts'
+import { closeDB, deleteDB, initIndexedDB } from './indexeddb.ts' // Added deleteDB import
 
 // Define types for file system entries and benchmark configurations
 type FileSystemEntry = any // This would be more specific in a real app
 
-interface BenchmarkConfig {
+export type BenchmarkConfig = {
   id: string
   title: string
   runBenchmark: (entries?: Array<FileSystemEntry>) => Promise<BenchmarkResult>
 }
 
-function App() {
-  // Define all benchmarks in a configuration array
-  const benchmarks: Array<BenchmarkConfig> = [
-    {
-      id: 'loop',
-      title: 'Loop Only',
-      runBenchmark: (entries: Array<FileSystemEntry> = []) => benchmarkLoopOnly(entries),
-    },
-    {
-      id: 'write',
-      title: 'Write to IndexedDB',
-      runBenchmark: (entries: Array<FileSystemEntry> = []) => benchmarkWriteToIndexedDB(entries),
-    },
-    {
-      id: 'write-overwrite',
-      title: 'Write to IndexedDB (overwrite)',
-      runBenchmark: (entries: Array<FileSystemEntry> = []) => benchmarkWriteToIndexedDB(entries),
-    },
-    {
-      id: 'read',
-      title: 'Read from IndexedDB (Batched)',
-      runBenchmark: () => benchmarkReadFromIndexedDB(),
-    },
-  ]
+const benchmarks: Array<BenchmarkConfig> = [
+  {
+    id: 'loop',
+    title: 'Loop Only',
+    runBenchmark: (entries: Array<FileSystemEntry> = []) => benchmarkLoopOnly(entries),
+  },
+  // Original IndexedDB benchmarks
+  {
+    id: 'write',
+    title: 'Write to IndexedDB',
+    runBenchmark: (entries: Array<FileSystemEntry> = []) =>
+      benchmarkWriteToIndexedDB(entries, false),
+  },
+  {
+    id: 'write-overwrite',
+    title: 'Write to IndexedDB (overwrite)',
+    runBenchmark: (entries: Array<FileSystemEntry> = []) =>
+      benchmarkWriteToIndexedDB(entries, false),
+  },
+  {
+    id: 'read',
+    title: 'Read from IndexedDB (Batched)',
+    runBenchmark: () => benchmarkReadFromIndexedDB(false),
+  },
+  // New IDB benchmarks
+  {
+    id: 'idb-write',
+    title: 'Write to IDB',
+    runBenchmark: (entries: Array<FileSystemEntry> = []) =>
+      benchmarkWriteToIndexedDB(entries, true),
+  },
+  {
+    id: 'idb-write-overwrite',
+    title: 'Write to IDB (overwrite)',
+    runBenchmark: (entries: Array<FileSystemEntry> = []) =>
+      benchmarkWriteToIndexedDB(entries, true),
+  },
+  {
+    id: 'idb-read',
+    title: 'Read from IDB (Batched)',
+    runBenchmark: () => benchmarkReadFromIndexedDB(true),
+  },
+]
 
+function App() {
   const [isProcessing, setIsProcessing] = createSignal(false)
   const [results, setResults] = createSignal<Record<string, BenchmarkResult | null>>({
     loop: null,
@@ -56,7 +77,8 @@ function App() {
   onMount(async () => {
     try {
       // Initialize the database
-      await initDB()
+      await initIndexedDB()
+      await initIDB()
     } catch (error) {
       console.error('Failed to initialize database:', error)
     }

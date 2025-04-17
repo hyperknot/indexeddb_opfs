@@ -16,12 +16,12 @@ export const STORE_NAME = 'files'
 export const BATCH_SIZE = 500
 
 // Initialize IDB
-export async function initDB(): Promise<IDBPDatabase<FilesDB>> {
+export async function initIDB(): Promise<IDBPDatabase<FilesDB>> {
   db = await openDB<FilesDB>(DB_NAME, 1, {
     upgrade(database) {
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME)
-        console.log('Object store created')
+        console.log('IDB Object store created')
       }
     },
   })
@@ -36,9 +36,9 @@ export async function batchSaveToIDB(files: Array<File>): Promise<void> {
 
   for (let i = 0; i < files.length; i += BATCH_SIZE) {
     const batchFiles = files.slice(i, i + BATCH_SIZE)
-    console.log(
-      `Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: saving ${batchFiles.length} files.`,
-    )
+    // console.log(
+    //   `Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: saving ${batchFiles.length} files.`,
+    // )
 
     // Start a new transaction for this batch
     // Using 'strict' durability for better data guarantees, though potentially slower
@@ -56,7 +56,7 @@ export async function batchSaveToIDB(files: Array<File>): Promise<void> {
     // Wait for the transaction for this batch to complete
     try {
       await tx.done
-      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1} saved successfully.`)
+      // console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1} saved successfully.`)
     } catch (error) {
       console.error(`Error saving batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error)
       // Decide error handling strategy: rethrow, log, continue?

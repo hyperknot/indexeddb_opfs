@@ -1,9 +1,15 @@
 import { getFileFromEntry, readDirectoryEntries } from './files.ts'
 import {
-  BATCH_SIZE,
+  BATCH_SIZE as IDB_BATCH_SIZE,
+  batchReadFromIDB,
+  batchSaveToIDB,
+  getAllKeys as getAllKeysFromIDB,
+} from './idb.ts'
+import {
+  BATCH_SIZE as INDEXEDDB_BATCH_SIZE,
   batchReadFromIndexedDB,
   batchSaveToIndexedDB,
-  getAllKeys,
+  getAllKeys as getAllKeysFromIndexedDB,
 } from './indexeddb.ts'
 
 // Type for storing benchmark results
@@ -15,9 +21,10 @@ export type BenchmarkResult = {
   totalSize: number
   errorCount: number
   dirCount: number
+  implementation?: string // Added to track which implementation was used
 }
 
-// Benchmark just looping through files
+// Benchmark just looping through files - unchanged
 export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkResult> {
   const benchmark: BenchmarkResult = {
     startTime: performance.now(),
@@ -29,8 +36,8 @@ export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkR
     dirCount: 0,
   }
 
+  // Rest of the function remains unchanged
   try {
-    // Process entries
     const queue = [...entries]
 
     while (queue.length > 0) {
@@ -38,10 +45,7 @@ export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkR
 
       if (entry.isFile) {
         try {
-          // Get the file object
           const file = await getFileFromEntry(entry)
-
-          // Update benchmark data
           benchmark.fileCount++
           benchmark.totalSize += file.size
         } catch (error) {
@@ -51,10 +55,7 @@ export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkR
       } else if (entry.isDirectory) {
         try {
           benchmark.dirCount++
-          // Read directory entries
           const dirEntries = await readDirectoryEntries(entry)
-
-          // Add entries to the queue
           queue.push(...dirEntries)
         } catch (error) {
           console.error(`Error reading directory: ${error}`)
@@ -63,7 +64,6 @@ export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkR
       }
     }
   } finally {
-    // Complete benchmark
     benchmark.endTime = performance.now()
     benchmark.duration = benchmark.endTime - benchmark.startTime
   }
@@ -71,8 +71,11 @@ export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkR
   return benchmark
 }
 
-// Optimized benchmark writing to IndexedDB with batching
-export async function benchmarkWriteToIndexedDB(entries: Array<any>): Promise<BenchmarkResult> {
+// Modified to accept implementation parameter
+export async function benchmarkWriteToIndexedDB(
+  entries: Array<any>,
+  useIDB = false,
+): Promise<BenchmarkResult> {
   const benchmark: BenchmarkResult = {
     startTime: performance.now(),
     endTime: 0,
@@ -81,11 +84,12 @@ export async function benchmarkWriteToIndexedDB(entries: Array<any>): Promise<Be
     totalSize: 0,
     errorCount: 0,
     dirCount: 0,
+    implementation: useIDB ? 'IDB' : 'IndexedDB',
   }
 
   try {
     const queue = [...entries]
-
+    const batchSize = useIDB ? IDB_BATCH_SIZE : INDEXEDDB_BATCH_SIZE
     let currentBatch: Array<File> = []
 
     while (queue.length > 0) {
@@ -100,8 +104,12 @@ export async function benchmarkWriteToIndexedDB(entries: Array<any>): Promise<Be
           currentBatch.push(file)
 
           // Process batch when it reaches the target size
-          if (currentBatch.length >= BATCH_SIZE) {
-            await batchSaveToIndexedDB(currentBatch)
+          if (currentBatch.length >= batchSize) {
+            if (useIDB) {
+              await batchSaveToIDB(currentBatch)
+            } else {
+              await batchSaveToIndexedDB(currentBatch)
+            }
             currentBatch = []
           }
         } catch (error) {
@@ -122,7 +130,11 @@ export async function benchmarkWriteToIndexedDB(entries: Array<any>): Promise<Be
 
     // Save any remaining files in the last batch
     if (currentBatch.length > 0) {
-      await batchSaveToIndexedDB(currentBatch)
+      if (useIDB) {
+        await batchSaveToIDB(currentBatch)
+      } else {
+        await batchSaveToIndexedDB(currentBatch)
+      }
     }
   } finally {
     benchmark.endTime = performance.now()
@@ -132,8 +144,8 @@ export async function benchmarkWriteToIndexedDB(entries: Array<any>): Promise<Be
   return benchmark
 }
 
-// Benchmark reading all files from IndexedDB in batches
-export async function benchmarkReadFromIndexedDB(): Promise<BenchmarkResult> {
+// Modified to accept implementation parameter
+export async function benchmarkReadFromIndexedDB(useIDB = false): Promise<BenchmarkResult> {
   const benchmark: BenchmarkResult = {
     startTime: performance.now(),
     endTime: 0,
@@ -142,14 +154,17 @@ export async function benchmarkReadFromIndexedDB(): Promise<BenchmarkResult> {
     totalSize: 0,
     errorCount: 0,
     dirCount: 0,
+    implementation: useIDB ? 'IDB' : 'IndexedDB',
   }
 
   try {
-    // Get all keys from the store
-    const keys = await getAllKeys()
+    // Get all keys from the appropriate store
+    const keys = useIDB ? await getAllKeysFromIDB() : await getAllKeysFromIndexedDB()
 
-    // Read files in batches
-    const files = await batchReadFromIndexedDB(keys, BATCH_SIZE)
+    // Read files in batches using the appropriate method
+    const files = useIDB
+      ? await batchReadFromIDB(keys, IDB_BATCH_SIZE)
+      : await batchReadFromIndexedDB(keys, INDEXEDDB_BATCH_SIZE)
 
     // Count files and total size
     for (const file of files) {
@@ -162,7 +177,6 @@ export async function benchmarkReadFromIndexedDB(): Promise<BenchmarkResult> {
     console.error('Error during read benchmark:', error)
     benchmark.errorCount++
   } finally {
-    // Complete benchmark
     benchmark.endTime = performance.now()
     benchmark.duration = benchmark.endTime - benchmark.startTime
   }

@@ -6,7 +6,7 @@ export const STORE_NAME = 'files'
 export const BATCH_SIZE = 500
 
 // Initialize IndexedDB
-export function initDB(): Promise<IDBDatabase> {
+export function initIndexedDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1)
 
@@ -26,7 +26,7 @@ export function initDB(): Promise<IDBDatabase> {
 
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME)
-        console.log('Object store created')
+        console.log('IndexedDB Object store created')
       }
     }
   })
