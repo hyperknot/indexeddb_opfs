@@ -15,7 +15,7 @@ export const STORE_NAME = 'files'
 
 export const BATCH_SIZE = 500
 
-// Initialize IndexedDB
+// Initialize IDB
 export async function initDB(): Promise<IDBPDatabase<FilesDB>> {
   db = await openDB<FilesDB>(DB_NAME, 1, {
     upgrade(database) {
@@ -26,28 +26,47 @@ export async function initDB(): Promise<IDBPDatabase<FilesDB>> {
     },
   })
 
-  console.log('IndexedDB initialized successfully')
+  console.log('IDB initialized successfully')
   return db
 }
 
-// Batch save files to IndexedDB using a single transaction for multiple files
-export async function batchSaveToIndexedDB(files: Array<File>): Promise<void> {
+// Batch save files to IDB using a single transaction for multiple files
+export async function batchSaveToIDB(files: Array<File>): Promise<void> {
   if (!db || files.length === 0) return
 
-  const tx = db.transaction(STORE_NAME, 'readwrite', { durability: 'strict' })
-  const store = tx.objectStore(STORE_NAME)
+  for (let i = 0; i < files.length; i += BATCH_SIZE) {
+    const batchFiles = files.slice(i, i + BATCH_SIZE)
+    console.log(
+      `Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: saving ${batchFiles.length} files.`,
+    )
 
-  // Add all files in one transaction
-  for (const file of files) {
-    const key = `file-${file.name}` // Creating string keys
-    store.put(file, key)
+    // Start a new transaction for this batch
+    // Using 'strict' durability for better data guarantees, though potentially slower
+    const tx = db.transaction(STORE_NAME, 'readwrite', { durability: 'strict' })
+    const store = tx.objectStore(STORE_NAME)
+
+    // Add all files in this batch within the transaction
+    // No need for Promise.all() here; idb handles requests within the transaction scope.
+    // The tx.done promise ensures all operations complete.
+    for (const file of batchFiles) {
+      const key = `file-${file.name}` // Creating string keys
+      store.put(file, key) // Initiate the put operation
+    }
+
+    // Wait for the transaction for this batch to complete
+    try {
+      await tx.done
+      console.log(`Batch ${Math.floor(i / BATCH_SIZE) + 1} saved successfully.`)
+    } catch (error) {
+      console.error(`Error saving batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error)
+      // Decide error handling strategy: rethrow, log, continue?
+      // Rethrowing will stop the entire batch save process on the first failed batch.
+      throw new Error(`Failed to save batch starting at index ${i}: ${error}`)
+    }
   }
-
-  // Wait for the transaction to complete
-  await tx.done
 }
 
-// Get all keys from IndexedDB store
+// Get all keys from IDB store
 export async function getAllKeys(): Promise<Array<IDBValidKey>> {
   // Returns general type
   if (!db) return []
@@ -55,9 +74,9 @@ export async function getAllKeys(): Promise<Array<IDBValidKey>> {
 }
 
 // Read files in batches using a single transaction per batch
-export async function batchReadFromIndexedDB(
+export async function batchReadFromIDB(
   keys: Array<IDBValidKey>, // Accepts general type
-  batchSize: number,
+  BATCH_SIZE: number,
 ): Promise<Array<File>> {
   // <-- Make return type more specific if possible (File)
   if (!db || keys.length === 0) return []
@@ -65,8 +84,8 @@ export async function batchReadFromIndexedDB(
   const results: Array<File> = [] // <-- Use File[] if sure
 
   // Process keys in batches
-  for (let i = 0; i < keys.length; i += batchSize) {
-    const batchKeys = keys.slice(i, i + batchSize)
+  for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+    const batchKeys = keys.slice(i, i + BATCH_SIZE)
 
     // Read this batch in a single transaction
     const tx = db.transaction(STORE_NAME, 'readonly')
