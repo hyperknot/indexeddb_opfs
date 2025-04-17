@@ -1,6 +1,6 @@
 // Database variables
 let db: IDBDatabase | null = null
-export const DB_NAME = 'filesDB'
+export const DB_NAME = 'filesDB_indexeddb'
 export const STORE_NAME = 'files'
 
 export const BATCH_SIZE = 500

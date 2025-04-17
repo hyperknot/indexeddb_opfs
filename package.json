@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "idb": "^8.0.2",
     "solid-js": "^1.9.5"
   },
   "devDependencies": {
