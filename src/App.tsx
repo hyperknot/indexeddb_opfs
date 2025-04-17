@@ -1,5 +1,5 @@
 import './App.css'
-import { createSignal, For, onCleanup, onMount, Show } from 'solid-js'
+import { For, Show, createSignal, onCleanup, onMount } from 'solid-js'
 import { BenchmarkCard } from './BenchmarkCard.tsx'
 import {
   type BenchmarkResult,
@@ -57,15 +57,30 @@ function App() {
   // Initialize the database when the component mounts
   onMount(async () => {
     try {
-      // Request persistent storage if the API is available
+      // Check if StorageManager API is supported
       if (navigator.storage?.persist) {
-        const persistent = await navigator.storage.persist()
-        setIsPersistent(persistent)
-        console.log(
-          persistent
-            ? 'Storage will not be cleared except by explicit user action'
-            : 'Storage may be cleared by the UA under storage pressure.',
-        )
+        // First check if storage is already persistent
+        const alreadyPersisted = await navigator.storage.persisted()
+
+        if (alreadyPersisted) {
+          // Storage is already persistent
+          setIsPersistent(true)
+          console.log('Storage is already persistent')
+        } else {
+          // Request notification permission first to improve chance of getting persistence
+          console.log('Requesting notification permission...')
+          const notificationPermission = await Notification.requestPermission()
+          console.log(`Notification permission: ${notificationPermission}`)
+
+          // Then request persistent storage
+          const persistent = await navigator.storage.persist()
+          setIsPersistent(persistent)
+          console.log(
+            persistent
+              ? 'Storage will not be cleared except by explicit user action'
+              : 'Storage may be cleared by the UA under storage pressure.',
+          )
+        }
       } else {
         console.log('StorageManager API not supported')
         setIsPersistent(false)
@@ -74,7 +89,7 @@ function App() {
       // Initialize the database
       await initDB()
     } catch (error) {
-      console.error('Failed to initialize database:', error)
+      console.error('Failed to initialize database or request permissions:', error)
     }
   })
 
