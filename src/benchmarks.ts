@@ -4,8 +4,6 @@ import {
   batchReadFromIndexedDB,
   batchSaveToIndexedDB,
   getAllKeys,
-
-
 } from './indexeddb.ts'
 
 // Type for storing benchmark results
@@ -68,8 +66,9 @@ export async function benchmarkLoopOnly(entries: Array<any>): Promise<BenchmarkR
     // Complete benchmark
     benchmark.endTime = performance.now()
     benchmark.duration = benchmark.endTime - benchmark.startTime
-    return benchmark
   }
+
+  return benchmark
 }
 
 // Optimized benchmark writing to IndexedDB with batching
@@ -128,8 +127,9 @@ export async function benchmarkWriteToIndexedDB(entries: Array<any>): Promise<Be
   } finally {
     benchmark.endTime = performance.now()
     benchmark.duration = benchmark.endTime - benchmark.startTime
-    return benchmark
   }
+
+  return benchmark
 }
 
 // Benchmark reading all files from IndexedDB in batches
@@ -165,6 +165,7 @@ export async function benchmarkReadFromIndexedDB(): Promise<BenchmarkResult> {
     // Complete benchmark
     benchmark.endTime = performance.now()
     benchmark.duration = benchmark.endTime - benchmark.startTime
-    return benchmark
   }
+
+  return benchmark
 }
