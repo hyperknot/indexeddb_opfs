@@ -55,7 +55,22 @@ function App() {
   const [isPersistent, setIsPersistent] = createSignal<boolean | null>(null)
 
   // Initialize the database when the component mounts
-  onMount(async () => {
+  onMount(async () => {})
+
+  // Close the database when the component unmounts
+  onCleanup(() => {
+    closeDB()
+  })
+
+  // Prevent default to allow drop
+  const handleDragOver = (e: DragEvent): void => {
+    e.preventDefault()
+  }
+
+  // Handle the drop event
+  const handleDrop = async (e: DragEvent): Promise<void> => {
+    e.preventDefault()
+
     try {
       // Check if StorageManager API is supported
       if (navigator.storage?.persist) {
@@ -91,21 +106,6 @@ function App() {
     } catch (error) {
       console.error('Failed to initialize database or request permissions:', error)
     }
-  })
-
-  // Close the database when the component unmounts
-  onCleanup(() => {
-    closeDB()
-  })
-
-  // Prevent default to allow drop
-  const handleDragOver = (e: DragEvent): void => {
-    e.preventDefault()
-  }
-
-  // Handle the drop event
-  const handleDrop = async (e: DragEvent): Promise<void> => {
-    e.preventDefault()
 
     if (isProcessing()) return
     setIsProcessing(true)
@@ -178,7 +178,7 @@ function App() {
         Drop a local folder on the drag and drop area, it'll benchmark how much time is required to
         store it.
       </p>
-      <p>It seems Chrome needs notifications to enable persistence</p>
+      <p>Chrome needs notifications to enable persistence</p>
       {/* Storage persistence status indicator */}
       <div class="persistence-status">
         <Show
