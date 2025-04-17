@@ -8,7 +8,7 @@ import {
   benchmarkReadFromIndexedDB,
   benchmarkWriteToIndexedDB,
 } from './benchmarks'
-import { closeDB, deleteDB, initDB } from './idb' // Added deleteDB import
+import { closeDB, deleteDB, initDB } from './indexeddb.ts' // Added deleteDB import
 
 // Define types for file system entries and benchmark configurations
 type FileSystemEntry = any // This would be more specific in a real app

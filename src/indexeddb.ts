@@ -103,7 +103,7 @@ export async function batchReadFromIndexedDB(
       }
 
       // Request each key in the same transaction
-      batchKeys.forEach((key) => {
+      for (const key of batchKeys) {
         const request = store.get(key)
 
         request.onsuccess = () => {
@@ -111,7 +111,7 @@ export async function batchReadFromIndexedDB(
             batchData.push(request.result)
           }
         }
-      })
+      }
     })
 
     results.push(...batchResults)

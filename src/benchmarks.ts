@@ -6,7 +6,7 @@ import {
   getAllKeys,
 
 
-} from './idb'
+} from './indexeddb.ts'
 
 // Type for storing benchmark results
 export type BenchmarkResult = {
