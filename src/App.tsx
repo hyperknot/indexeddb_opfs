@@ -1,6 +1,7 @@
 import './App.css'
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js'
 import { BenchmarkCard } from './BenchmarkCard.tsx'
+import { StoragePersistence } from './StoragePersistence' // Import the new component
 import {
   type BenchmarkResult,
   benchmarkLoopOnly,
@@ -51,11 +52,15 @@ function App() {
     read: null,
   })
 
-  // Add a signal to track storage persistence status
-  const [isPersistent, setIsPersistent] = createSignal<boolean | null>(null)
-
   // Initialize the database when the component mounts
-  onMount(async () => {})
+  onMount(async () => {
+    try {
+      // Initialize the database
+      await initDB()
+    } catch (error) {
+      console.error('Failed to initialize database:', error)
+    }
+  })
 
   // Close the database when the component unmounts
   onCleanup(() => {
@@ -70,42 +75,6 @@ function App() {
   // Handle the drop event
   const handleDrop = async (e: DragEvent): Promise<void> => {
     e.preventDefault()
-
-    try {
-      // Check if StorageManager API is supported
-      if (navigator.storage?.persist) {
-        // First check if storage is already persistent
-        const alreadyPersisted = await navigator.storage.persisted()
-
-        if (alreadyPersisted) {
-          // Storage is already persistent
-          setIsPersistent(true)
-          console.log('Storage is already persistent')
-        } else {
-          // Request notification permission first to improve chance of getting persistence
-          console.log('Requesting notification permission...')
-          const notificationPermission = await Notification.requestPermission()
-          console.log(`Notification permission: ${notificationPermission}`)
-
-          // Then request persistent storage
-          const persistent = await navigator.storage.persist()
-          setIsPersistent(persistent)
-          console.log(
-            persistent
-              ? 'Storage will not be cleared except by explicit user action'
-              : 'Storage may be cleared by the UA under storage pressure.',
-          )
-        }
-      } else {
-        console.log('StorageManager API not supported')
-        setIsPersistent(false)
-      }
-
-      // Initialize the database
-      await initDB()
-    } catch (error) {
-      console.error('Failed to initialize database or request permissions:', error)
-    }
 
     if (isProcessing()) return
     setIsProcessing(true)
@@ -170,35 +139,8 @@ function App() {
 
   return (
     <div class="app-container">
-      <h1>IndexedDB vs. OPFS benchmark</h1>
-      <p>
-        <a href="https://github.com/hyperknot/indexeddb_opfs">GitHub</a>
-      </p>
-      <p>
-        Drop a local folder on the drag and drop area, it'll benchmark how much time is required to
-        store it.
-      </p>
-      <p>Chrome needs notifications to enable persistence</p>
-      {/* Storage persistence status indicator */}
-      <div class="persistence-status">
-        <Show
-          when={navigator.storage?.persist}
-          fallback={
-            <span class="persistence-unsupported">Storage Persistence API not supported</span>
-          }
-        >
-          <Show
-            when={isPersistent() !== null}
-            fallback={<span class="persistence-loading">Checking storage persistence...</span>}
-          >
-            {isPersistent() ? (
-              <span class="persistence-enabled">Storage: Persistent ✓</span>
-            ) : (
-              <span class="persistence-disabled">Storage: May be cleared under pressure ⚠️</span>
-            )}
-          </Show>
-        </Show>
-      </div>
+      {/* Use the StoragePersistence component */}
+      <StoragePersistence />
 
       <div
         class={`drop-zone ${isProcessing() ? 'drop-zone-active' : ''}`}
